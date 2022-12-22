@@ -8,55 +8,69 @@ import { expect } from "chai";
 import { artifacts, ethers, network } from "hardhat";
 import * as tokenAddreess from "../token_address.json";
 import { Signer, BigNumber } from "ethers";
-import { token } from "../typechain-types/@openzeppelin/contracts";
 import { TestCompoundErc20 } from "../typechain-types/contracts/TestCompoundErc20";
 import { CErc20 } from "../typechain-types";
 import { IERC20 } from "../typechain-types/@openzeppelin/contracts/token/ERC20/IERC20";
+import { sendEther } from "./utils";
 
 describe("TestCompoundErc20", function () {
-    let WBTCSigner: Signer, USDCSigner: Signer;
+    let USDCSigner: Signer, WETHSigner: Signer, DAISigner: Signer;
     let testCompoundErc20: TestCompoundErc20;
-    let CWBTCContract: CErc20, CUSDCContract: CErc20;
-    let WBTCContract: IERC20, USDCContract: IERC20;
-    let DEPOSIT_AMOUNT = ethers.BigNumber.from(10).pow(8).mul(1);
+    let CUSDCContract: CErc20, CWETHContract: CErc20, CDAIContract: CErc20;
+    let USDCContract: IERC20, WETHContract: IERC20, DAIContract: IERC20;
+    let DEPOSIT_AMOUNT = ethers.BigNumber.from(10).pow(18).mul(10);
 
     beforeEach(async () => {
-        const WBTC: string = tokenAddreess.WBTC;
         const WETH: string = tokenAddreess.WETH.WETH9;
-        const CWBTC: string = tokenAddreess.CTOKEN.CWBTC;
+        const CWETH: string = tokenAddreess.CTOKEN.CWETH;
+
         const USDC: string = tokenAddreess.USDC;
         const CUSDC: string = tokenAddreess.CTOKEN.CUSDC;
 
-        const WBTCSignerAddress: string = tokenAddreess.Signer.WBTCSigner;
+        const DAI: string = tokenAddreess.DAI;
+        const CDAI: string = tokenAddreess.CTOKEN.CDAI;
+
         const USDCSignerAddress: string = tokenAddreess.Signer.USDCSigner;
+        const WETHSignerAddress: string = tokenAddreess.Signer.WETHSigner;
+        const DAISignerAddress: string = tokenAddreess.Signer.DAISigner;
+
+        let signers: Signer[] = await ethers.getSigners();
 
         await network.provider.request({
             method: "hardhat_impersonateAccount",
-            params: [WBTCSignerAddress],
+            params: [DAISignerAddress],
         });
-        WBTCSigner = await ethers.getSigner(WBTCSignerAddress);
+        DAISigner = await ethers.getSigner(DAISignerAddress);
 
-        await network.provider.request({
-            method: "hardhat_impersonateAccount",
-            params: [USDCSignerAddress],
-        });
-        USDCSigner = await ethers.getSigner(USDCSignerAddress);
-
+        // // ======================
+        // console.log(ethers.utils.formatEther(await signers[0].getBalance()));
+        // await sendEther(signers[0], USDCSigner, 1000);
+        // const tx = {
+        //     from: await signers[0].getAddress(),
+        //     to: await USDCSigner.getAddress(),
+        //     value: 10000,
+        //     gasPrice: 250000000000,
+        //     gasLimit: 1001000,
+        // };
+        // const receipt = await signers[0].sendTransaction(tx);
+        // await receipt.wait();
+        // ======================
+        console.log("ffffffffffffffffffffffff");
         const TestCompoundErc20 = await ethers.getContractFactory(
             "TestCompoundErc20"
         );
-        testCompoundErc20 = await TestCompoundErc20.deploy(USDC, CUSDC);
+        testCompoundErc20 = await TestCompoundErc20.deploy(DAI, CDAI);
         await testCompoundErc20.deployed();
         console.log("testCompoundErc20: " + testCompoundErc20.address);
 
         // 拿到未部署合约的实例
-        WBTCContract = await ethers.getContractAt("IERC20", WBTC);
-        CWBTCContract = await ethers.getContractAt("CErc20", CWBTC);
-        USDCContract = await ethers.getContractAt("IERC20", USDC);
-        CUSDCContract = await ethers.getContractAt("CErc20", CUSDC);
+
+        DAIContract = await ethers.getContractAt("IERC20", DAI);
+        CDAIContract = await ethers.getContractAt("CErc20", CDAI);
+
         console.log(
-            "USDCContract balance: " +
-                (await USDCContract.balanceOf(USDCSignerAddress)) +
+            "DAIContract balance: " +
+                (await DAIContract.balanceOf(DAISignerAddress)) +
                 "\n"
         );
     });
@@ -75,10 +89,11 @@ describe("TestCompoundErc20", function () {
         //
         let balanceOfUnderlying: BigNumber =
             await testCompoundErc20.callStatic.balanceOfUnderlying();
-        let USDCBalance: BigNumber = await USDCContract.balanceOf(
+
+        let DAIBalance: BigNumber = await DAIContract.balanceOf(
             testCompoundErc20.address
         );
-        let CUSDCBalance: BigNumber = await CUSDCContract.balanceOf(
+        let CDAIBalance: BigNumber = await CDAIContract.balanceOf(
             testCompoundErc20.address
         );
         return {
@@ -86,30 +101,34 @@ describe("TestCompoundErc20", function () {
             supplyRate,
             estimateBalance,
             balanceOfUnderlying,
-            USDCBalance,
-            CUSDCBalance,
+            DAIBalance,
+            CDAIBalance,
         };
     };
 
-    // describe("function test", () => {
     it("should supply and redeem", async () => {
-        let approveTx = await USDCContract.connect(USDCSigner).approve(
+        let approveTx = await DAIContract.connect(DAISigner).approve(
             testCompoundErc20.address,
             DEPOSIT_AMOUNT
         );
         await approveTx.wait();
 
-        let tx = await testCompoundErc20.connect(USDCSigner).supply(10000, {
-            gasPrice: 250000000000,
-            gasLimit: 1001000,
-            from: await USDCSigner.getAddress(),
-        });
+        console.log("after approve...");
+
+        let tx = await testCompoundErc20
+            .connect(DAISigner)
+            .supply(DEPOSIT_AMOUNT, {
+                gasPrice: 250000000000,
+                gasLimit: 10010000,
+                from: await DAISigner.getAddress(),
+            });
         await tx.wait();
 
+        console.log("+++++++++++++++++++++++++");
         let after = await snapshot(
             testCompoundErc20,
-            USDCContract,
-            CUSDCContract
+            DAIContract,
+            CDAIContract
         );
 
         console.log("--- supply ---");
@@ -117,12 +136,34 @@ describe("TestCompoundErc20", function () {
         console.log(`supply rate ${after.supplyRate}`);
         console.log(`estimate balance ${after.estimateBalance}`);
         console.log(`balance of underlying ${after.balanceOfUnderlying}`);
-        console.log(`token balance ${after.USDCBalance}`);
-        console.log(`c token balance ${after.CUSDCBalance}`);
+        console.log(`token balance ${after.DAIBalance}`);
+        console.log(`c token balance ${after.CDAIBalance}`);
 
         // accrue interest
         const block = await ethers.provider.getBlockNumber();
-        await mine(100);
+        await mine(1000);
+
+        after = await snapshot(testCompoundErc20, DAIContract, CDAIContract);
+
+        console.log(`--- after some blocks... ---`);
+        console.log(`balance of underlying ${after.balanceOfUnderlying}`);
+
+        // test redeem
+        const cTokenAmount = await CDAIContract.balanceOf(
+            testCompoundErc20.address
+        );
+
+        tx = await testCompoundErc20.connect(DAISigner).redeem(cTokenAmount, {
+            from: await DAISigner.getAddress(),
+        });
+        await tx.wait();
+
+        after = await snapshot(testCompoundErc20, DAIContract, CDAIContract);
+
+        console.log(`--- redeem ---`);
+        console.log(`balance of underlying ${after.balanceOfUnderlying}`);
+        console.log(`token balance ${after.DAIBalance}`);
+        console.log(`c token balance ${after.CDAIBalance}`);
     });
 });
 // });

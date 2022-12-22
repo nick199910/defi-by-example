@@ -36,7 +36,7 @@ const config: HardhatUserConfig = {
         },
         hardhat: {
             forking: {
-                url: ETHMAIN_RPC_URL,
+                url: ETHMAIN_RPC_QUICKNODE_URL,
             },
         },
     },
